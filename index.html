@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Bridger Alert ID String Generator">
+    <meta name="author" content="Ruolin Liu">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bridger Alert ID String Generator</title>
+    <style>
+        body { background-color: antiquewhite; }
+        .navbar { margin-bottom: 30px; }
+        .card { margin-top: 20px; }
+        .h1 { color: black; }
+        .form-group { margin-bottom: 1.5rem; }
+        .search-btn { background-color: chartreuse; color: crimson; }
+        .search-btn:hover { background-color: antiquewhite; }
+        .result-card { margin-top: 20px; }
+        .result-header { color: blue; }
+        .result-body { padding: 20px; color: blue; }
+        footer { text-align: center; margin-top: 50px; padding: 20px 0; background-color: antiquewhite; color: aqua; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Bridger Alert ID String Generator</h1>
+        <form action="/generate" method="POST">
+            <div class="form-group">
+                <label for="numbers">List of Bridger Alert ID Numbers:</label>
+                <textarea class="form-control" id="numbers" name="numbers" style="width:100px; height:300px;" placeholder="25786285423&#10;25786285438&#10;..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Generate</button>
+        </form>
+        <br><br>
+
+        <!-- Result section only shown if there's a result -->
+        {% if result %}
+        <div class="card-body result-body">
+            <p><strong>Please see below as formatted Bridger Alert ID String:</strong></p>
+            <p id="result-text"><strong>{{ result }}</strong></p>
+            <button class="btn btn-secondary" onclick="copyToClipboard()">Copy Result to Clipboard</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function copyToClipboard() {
+            var resultText = document.getElementById('result-text').innerText;
+            var tempInput = document.createElement('input');
+            tempInput.style.position = 'absolute';
+            tempInput.style.left = '-9999px';  // Ensure the input is off-screen
+            tempInput.value = resultText;  // Assign the result text to the temporary input
+            document.body.appendChild(tempInput);
+            tempInput.select();  // Select the input content
+            document.execCommand('copy');  // Execute the copy command
+            document.body.removeChild(tempInput);  // Remove the temporary input
+            alert('Copied to clipboard!');  // Display a confirmation message
+        }
+    </script>
+
+    <footer>
+        &copy; 2024 Bridger Alert String Tool. Powered by Flask. Developed by Ruolin.
+    </footer>
+</body>
+</html>
