@@ -2,63 +2,266 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="description" content="Bridger Alert ID String Generator">
-    <meta name="author" content="Ruolin Liu">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bridger Alert ID String Generator</title>
+    <meta name="description" content="Bridger Input Query String Generator - Generate formatted input query strings">
+    <title>Bridger Input Query String Generator Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <style>
-        body { background-color: antiquewhite; }
-        .navbar { margin-bottom: 30px; }
-        .card { margin-top: 20px; }
-        .h1 { color: black; }
-        .form-group { margin-bottom: 1.5rem; }
-        .search-btn { background-color: chartreuse; color: crimson; }
-        .search-btn:hover { background-color: antiquewhite; }
-        .result-card { margin-top: 20px; }
-        .result-header { color: blue; }
-        .result-body { padding: 20px; color: blue; }
-        footer { text-align: center; margin-top: 50px; padding: 20px 0; background-color: antiquewhite; color: aqua; }
+        :root {
+            --primary-bg: #f0f8ff;
+            --text-color: #333;
+            --container-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --result-bg: #f8f9fa;
+        }
+        body { 
+            background-color: var(--primary-bg); 
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .container-bordered {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            box-shadow: var(--container-shadow);
+            padding: 2rem;
+            background-color: white;
+            max-width: 800px;
+            margin: 2rem auto;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 200px;
+            max-height: 500px;
+        }
+        .result-container {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: var(--result-bg);
+            border-radius: 0.25rem;
+            word-break: break-all;
+        }
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        .copy-success {
+            color: #198754;
+            font-weight: bold;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+        @media (max-width: 576px) {
+            .container-bordered {
+                padding: 1rem;
+                margin: 1rem;
+            }
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1 class="mt-5">Bridger Alert ID String Generator</h1>
-        <form action="/generate" method="POST">
-            <div class="form-group">
-                <label for="numbers">List of Bridger Alert ID Numbers:</label>
-                <textarea class="form-control" id="numbers" name="numbers" style="width:100px; height:300px;" placeholder="25786285423&#10;25786285438&#10;..." required></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Generate</button>
-        </form>
-        <br><br>
 
-        <!-- Result section only shown if there's a result -->
-        {% if result %}
-        <div class="card-body result-body">
-            <p><strong>Please see below as formatted Bridger Alert ID String:</strong></p>
-            <p id="result-text"><strong>{{ result }}</strong></p>
-            <button class="btn btn-secondary" onclick="copyToClipboard()">Copy Result to Clipboard</button>
+<body>
+    <main class="container container-bordered">
+        <h1 class="text-center mb-4">Bridger Input Query String Generator</h1>
+        
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
         </div>
         {% endif %}
-    </div>
+        
+        <form id="generator-form" action="/generate" method="POST" class="needs-validation" novalidate>
+            <div class="mb-3">
+                <label for="search_type" class="form-label">Select Search Type:</label>
+                <select class="form-select" id="search_type" name="search_type" required>
+                    <option value="" disabled {% if not search_type %}selected{% endif %}>-- Select a search type --</option>
+                    {% for type in search_types %}
+                    <option value="{{ type }}" {% if type == search_type %}selected{% endif %}>{{ type }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select a search type.</div>
+                <div class="form-text">Your selection will be remembered for next time.</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="ids" class="form-label">List of Input Terms:</label>
+                <textarea class="form-control" id="ids" name="ids" 
+                          placeholder="Enter terms, one per line"
+                          aria-describedby="idsHelp"
+                          required></textarea>
+                <div class="invalid-feedback">Please enter at least one input term.</div>
+                <div id="idsHelp" class="form-text">Each term should be on a new line. Remove blank rows to avoid errors.</div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-danger">Generate Query</button>
+            </div>
+        </form>
+
+        {% if result %}
+        <div class="result-container" id="result-section">
+            <h2 class="h5">Generated Result:</h2>
+            <div id="result-text" class="border p-3 bg-light rounded mb-2" aria-live="polite">{{ result }}</div>
+            <button id="copy-btn" class="btn btn-success" aria-label="Copy result to clipboard">
+                <span id="copy-text">Copy to clipboard</span>
+                <span class="visually-hidden" id="copy-status"></span>
+            </button>
+        </div>
+        {% endif %}
+    </main>
 
     <script>
-        function copyToClipboard() {
-            var resultText = document.getElementById('result-text').innerText;
-            var tempInput = document.createElement('input');
-            tempInput.style.position = 'absolute';
-            tempInput.style.left = '-9999px';  // Ensure the input is off-screen
-            tempInput.value = resultText;  // Assign the result text to the temporary input
-            document.body.appendChild(tempInput);
-            tempInput.select();  // Select the input content
-            document.execCommand('copy');  // Execute the copy command
-            document.body.removeChild(tempInput);  // Remove the temporary input
-            alert('Copied to clipboard!');  // Display a confirmation message
-        }
+        // Function to safely store and retrieve from localStorage with fallback
+        const storage = {
+            setItem: function(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                    return true;
+                } catch (e) {
+                    console.warn('LocalStorage not available:', e);
+                    return false;
+                }
+            },
+            getItem: function(key) {
+                try {
+                    return localStorage.getItem(key);
+                } catch (e) {
+                    console.warn('LocalStorage not available:', e);
+                    return null;
+                }
+            }
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form validation
+            const form = document.getElementById('generator-form');
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                });
+            }
+            
+            // Clipboard functionality with better error handling and accessibility
+            const copyBtn = document.getElementById('copy-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', function() {
+                    const resultText = document.getElementById('result-text').textContent;
+                    const copyText = document.getElementById('copy-text');
+                    const originalText = copyText.textContent;
+                    const copyStatus = document.getElementById('copy-status');
+                    
+                    try {
+                        navigator.clipboard.writeText(resultText)
+                            .then(() => {
+                                copyText.textContent = 'Copied!';
+                                copyText.classList.add('copy-success');
+                                copyStatus.textContent = 'Result copied to clipboard';
+                                
+                                setTimeout(() => {
+                                    copyText.textContent = originalText;
+                                    copyText.classList.remove('copy-success');
+                                    copyStatus.textContent = '';
+                                }, 2000);
+                            })
+                            .catch(err => {
+                                console.error('Failed to copy: ', err);
+                                copyText.textContent = 'Copy failed';
+                                copyStatus.textContent = 'Failed to copy result';
+                                
+                                setTimeout(() => {
+                                    copyText.textContent = originalText;
+                                    copyStatus.textContent = '';
+                                }, 2000);
+                            });
+                    } catch (err) {
+                        // Fallback for browsers without clipboard API
+                        const textArea = document.createElement('textarea');
+                        textArea.value = resultText;
+                        textArea.style.position = 'fixed';
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        
+                        try {
+                            const successful = document.execCommand('copy');
+                            if (successful) {
+                                copyText.textContent = 'Copied!';
+                                copyStatus.textContent = 'Result copied to clipboard';
+                            } else {
+                                copyText.textContent = 'Copy failed';
+                                copyStatus.textContent = 'Failed to copy result';
+                            }
+                        } catch (err) {
+                            copyText.textContent = 'Copy failed';
+                            copyStatus.textContent = 'Failed to copy result';
+                        }
+                        
+                        document.body.removeChild(textArea);
+                        
+                        setTimeout(() => {
+                            copyText.textContent = originalText;
+                            copyStatus.textContent = '';
+                        }, 2000);
+                    }
+                });
+            }
+            
+            // Keep the user's input in the textarea after form submission
+            const textarea = document.getElementById('ids');
+            // Restore previous input values if available
+            if (textarea) {
+                // Try to get from form submission first
+                const formData = new FormData(form);
+                const submittedValue = formData.get('ids');
+                
+                if (submittedValue) {
+                    textarea.value = submittedValue;
+                } else {
+                    // Or try from localStorage as fallback
+                    const savedIds = storage.getItem('bridger_ids');
+                    if (savedIds) {
+                        textarea.value = savedIds;
+                    }
+                }
+                
+                // Save input values on change
+                textarea.addEventListener('change', function() {
+                    storage.setItem('bridger_ids', this.value);
+                });
+            }
+            
+            // Save and restore search type selection
+            const searchTypeSelect = document.getElementById('search_type');
+            if (searchTypeSelect) {
+                // Restore previous selection
+                const savedSearchType = storage.getItem('bridger_search_type');
+                if (savedSearchType) {
+                    // Find the option with the saved value
+                    Array.from(searchTypeSelect.options).forEach(option => {
+                        if (option.value === savedSearchType) {
+                            option.selected = true;
+                        }
+                    });
+                }
+                
+                // Save selection on change
+                searchTypeSelect.addEventListener('change', function() {
+                    storage.setItem('bridger_search_type', this.value);
+                });
+            }
+        });
     </script>
-
-    <footer>
-        &copy; 2024 Bridger Alert String Tool. Powered by Flask. Developed by Ruolin.
-    </footer>
 </body>
 </html>
